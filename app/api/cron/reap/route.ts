@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+import { isAuthorizedCronRequest } from '@/lib/cron-auth'
 import { reapExpired } from '@/lib/store'
 
 export const runtime = 'nodejs'
@@ -12,12 +13,7 @@ export const maxDuration = 60
  * 下载入口本身就会拒绝过期链接，所以这里只是回收存储空间。
  */
 export async function GET(request: Request): Promise<NextResponse> {
-  const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    if (request.headers.get('authorization') !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-    }
-  } else if (process.env.NODE_ENV === 'production' && !request.headers.get('x-vercel-cron')) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 

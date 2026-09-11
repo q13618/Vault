@@ -28,7 +28,9 @@ npm run build
 2. 在项目的 **Storage** 里创建一个 **Blob** 存储并关联到本项目。平台会自动注入
    `BLOB_READ_WRITE_TOKEN` —— 这是唯一必需的环境变量，**这一步必须手动做一次**，
    否则上传会返回 503。
-3. 建议再设一个 `CRON_SECRET`，定时清理接口只接受带该密钥的调用。
+3. 建议再设一个 `CRON_SECRET`：设了之后定时清理接口只接受带 `Authorization: Bearer <CRON_SECRET>`
+   的调用（这个头由 Vercel 自动附加）。不设也能跑 —— 接口会退而校验平台注入的
+   `x-vercel-cron-schedule` 头，外部调用者伪造不了它。
 4. 重新部署。之后每次推送都会自动构建：推生产分支出生产版本，推其他分支出预览版本。
 5. 这是个面向收件人的公开站点，所以项目的 Vercel Authentication（登录墙）需要关掉，
    否则收到链接的人会先被要求登录 Vercel。
@@ -38,7 +40,7 @@ npm run build
 | 变量 | 必需 | 说明 |
 | --- | --- | --- |
 | `BLOB_READ_WRITE_TOKEN` | 是 | 关联 Blob 存储后由 Vercel 注入 |
-| `CRON_SECRET` | 建议 | 保护 `/api/cron/reap` |
+| `CRON_SECRET` | 建议 | 保护 `/api/cron/reap`；不设时退回校验 `x-vercel-cron-schedule` |
 | `VAULT_ANON_MAX_MB` | 否 | 匿名用户单文件上限（MB），默认 200 |
 
 ## 存储布局
