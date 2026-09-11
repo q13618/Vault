@@ -1,8 +1,14 @@
 import type { Metadata, Viewport } from 'next'
 
+import { canonicalOrigin } from '@/lib/site'
+
 import './globals.css'
 
+const origin = canonicalOrigin()
+
 export const metadata: Metadata = {
+  // 绑了自定义域名后，社交分享卡片里的绝对地址才指得对。
+  ...(origin ? { metadataBase: new URL(origin) } : {}),
   title: {
     default: 'Vault — 临时文件中转站',
     template: '%s · Vault',

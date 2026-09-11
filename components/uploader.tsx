@@ -40,6 +40,8 @@ interface Props {
   maxFileBytes: number
   ttls: number[]
   defaultTtl: number
+  /** 站点规范域名。为空时退回用当前访问的地址。 */
+  shareOrigin?: string | null
 }
 
 const expiryFormatter = new Intl.DateTimeFormat('zh-CN', {
@@ -49,7 +51,7 @@ const expiryFormatter = new Intl.DateTimeFormat('zh-CN', {
   minute: '2-digit',
 })
 
-export default function Uploader({ maxFileBytes, ttls, defaultTtl }: Props) {
+export default function Uploader({ maxFileBytes, ttls, defaultTtl, shareOrigin }: Props) {
   const [items, setItems] = useState<Item[]>([])
   const [ttl, setTtl] = useState(defaultTtl)
   const [over, setOver] = useState(false)
@@ -59,6 +61,16 @@ export default function Uploader({ maxFileBytes, ttls, defaultTtl }: Props) {
   const draining = useRef(false)
   const ttlRef = useRef(defaultTtl)
   ttlRef.current = ttl
+
+  const shareUrl = useCallback(
+    (id: string) => `${shareOrigin || window.location.origin}/d/${id}`,
+    [shareOrigin],
+  )
+
+  const manageUrl = useCallback(
+    (item: Item) => `${shareUrl(item.id!)}?s=${encodeURIComponent(item.manageSecret!)}`,
+    [shareUrl],
+  )
 
   const patch = useCallback((key: string, next: Partial<Item>) => {
     setItems((prev) => prev.map((item) => (item.key === key ? { ...item, ...next } : item)))
@@ -175,7 +187,7 @@ export default function Uploader({ maxFileBytes, ttls, defaultTtl }: Props) {
       const dataUrl = await toDataURL(shareUrl(item.id!), { margin: 1, width: 336 })
       patch(item.key, { qr: dataUrl })
     },
-    [patch],
+    [patch, shareUrl],
   )
 
   const revoke = useCallback(
@@ -326,10 +338,3 @@ export default function Uploader({ maxFileBytes, ttls, defaultTtl }: Props) {
   )
 }
 
-function shareUrl(id: string): string {
-  return `${window.location.origin}/d/${id}`
-}
-
-function manageUrl(item: Item): string {
-  return `${shareUrl(item.id!)}?s=${encodeURIComponent(item.manageSecret!)}`
-}

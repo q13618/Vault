@@ -42,6 +42,25 @@ npm run build
 | `BLOB_READ_WRITE_TOKEN` | 是 | 关联 Blob 存储后由 Vercel 注入 |
 | `CRON_SECRET` | 建议 | 保护 `/api/cron/reap`；不设时退回校验 `x-vercel-cron-schedule` |
 | `VAULT_ANON_MAX_MB` | 否 | 匿名用户单文件上限（MB），默认 200 |
+| `VAULT_CANONICAL_HOST` | 否 | 分享链接使用的规范域名；不设时生产部署自动取 Vercel 的生产域名 |
+
+## 自定义域名
+
+分享链接越短越好，而且同一个文件不该出现两种链接。所以生成链接时用的是「规范域名」：
+
+1. 设了 `VAULT_CANONICAL_HOST` 就用它；
+2. 否则生产部署取 Vercel 注入的 `VERCEL_PROJECT_PRODUCTION_URL` —— 把自定义域名设为生产域名后，
+   它就是那个域名，**换域名不用改代码**；
+3. 都没有则退回浏览器当前访问的地址（本地开发、预览部署就是这种情况）。
+
+因此绑定域名只需要两步，都在平台侧完成：
+
+1. Vercel 项目 → Settings → Domains → 添加域名（子域名同理）。
+2. 按页面提示在 DNS 服务商处加一条记录。子域名是 `CNAME`，值形如
+   `cname.vercel-dns-0.com`（**以 Vercel 页面上显示的值为准**，不同账号后缀不同）；
+   顶级域名则是 `A` 记录指向 `76.76.21.21`。
+
+域名 Valid 之后重新部署一次，分享链接就会自动换成新域名。
 
 ## 存储布局
 

@@ -1,6 +1,7 @@
 import Uploader from '@/components/uploader'
 import { formatBytes, formatTtl } from '@/lib/format'
 import { maxTtl, PLAN_ORDER, PLANS, resolvePlan } from '@/lib/plans'
+import { canonicalOrigin } from '@/lib/site'
 import { blobConfigured } from '@/lib/store'
 
 export const dynamic = 'force-dynamic'
@@ -24,6 +25,7 @@ export default function HomePage() {
           maxFileBytes={plan.maxFileBytes}
           ttls={plan.ttls}
           defaultTtl={plan.defaultTtl}
+          shareOrigin={canonicalOrigin()}
         />
       ) : (
         <div className="notice">
