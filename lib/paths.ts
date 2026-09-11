@@ -70,8 +70,28 @@ export interface BlobPathParts {
   filename: string
 }
 
+/**
+ * 只转义会破坏路径或响应头的字符，中文、空格、括号等一律原样保留。
+ *
+ * 这一点很重要：对象存储是按路径最后一段生成 `Content-Disposition` 的，
+ * 如果把整个文件名 `encodeURIComponent` 掉，收件人另存时看到的就会是
+ * `%E5%81%87%E6%9C%9F.mp4` 而不是「假期.mp4」。
+ *
+ * `%` 自己也在转义表里，所以 `decodeURIComponent` 正好是它的逆运算。
+ */
+const UNSAFE_IN_SEGMENT = /[\u0000-\u001f\u007f%?#/\\"]/g
+
+export function encodeFilenameSegment(filename: string): string {
+  return filename.replace(UNSAFE_IN_SEGMENT, (char) => {
+    const bytes = new TextEncoder().encode(char)
+    let out = ''
+    for (const byte of bytes) out += `%${byte.toString(16).toUpperCase().padStart(2, '0')}`
+    return out
+  })
+}
+
 export function buildBlobPath(parts: BlobPathParts): string {
-  const filename = encodeURIComponent(sanitizeFilename(parts.filename))
+  const filename = encodeFilenameSegment(sanitizeFilename(parts.filename))
   return `f/${parts.id}/${parts.expiresAt}/${parts.secret}/${parts.manageHash}/${filename}`
 }
 

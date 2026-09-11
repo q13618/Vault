@@ -3,6 +3,7 @@ import test from 'node:test'
 
 import {
   buildBlobPath,
+  encodeFilenameSegment,
   hashManageSecret,
   isValidId,
   MANAGE_HASH_LENGTH,
@@ -71,6 +72,23 @@ test('文件名里的目录分隔符会被剥掉，不会写出额外层级', ()
 
   const parsed = parseBlobPath(samplePath({ filename: 'a/b/c.bin' }))
   assert.equal(parsed?.filename, 'c.bin')
+})
+
+test('中文文件名原样保留，只转义会破坏路径的字符', () => {
+  // 对象存储按路径最后一段生成 Content-Disposition，所以中文不能被整体转义，
+  // 否则收件人另存时看到的会是一串 %E5%81%87。
+  assert.equal(encodeFilenameSegment('假期视频.mp4'), '假期视频.mp4')
+  assert.equal(encodeFilenameSegment('my report (final).pdf'), 'my report (final).pdf')
+  assert.equal(encodeFilenameSegment('Ünïcode Ñame.txt'), 'Ünïcode Ñame.txt')
+
+  // 这几个字符留在路径里会把 URL 或响应头弄坏，必须转义。
+  assert.equal(encodeFilenameSegment('100%真的.png'), '100%25真的.png')
+  assert.equal(encodeFilenameSegment('q?x#y.zip'), 'q%3Fx%23y.zip')
+
+  // 且转义是可逆的：编码 → 解析后拿回一模一样的文件名。
+  for (const name of ['假期视频.mp4', '100%真的.png', 'q?x#y.zip', 'a b c.txt', 'Ünïcode Ñame.txt']) {
+    assert.equal(parseBlobPath(samplePath({ filename: name }))?.filename, name, name)
+  }
 })
 
 test('撤回口令只以哈希形式落在路径里', async () => {

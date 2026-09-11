@@ -29,7 +29,9 @@ npm run build
    `BLOB_READ_WRITE_TOKEN` —— 这是唯一必需的环境变量，**这一步必须手动做一次**，
    否则上传会返回 503。
 3. 建议再设一个 `CRON_SECRET`，定时清理接口只接受带该密钥的调用。
-4. 重新部署。之后每次推送都会自动构建：推 `main` 出生产版本，推其他分支出预览版本。
+4. 重新部署。之后每次推送都会自动构建：推生产分支出生产版本，推其他分支出预览版本。
+5. 这是个面向收件人的公开站点，所以项目的 Vercel Authentication（登录墙）需要关掉，
+   否则收到链接的人会先被要求登录 Vercel。
 
 `vercel.json` 里已经声明了每小时执行一次的清理任务（`/api/cron/reap`）。
 
@@ -53,7 +55,7 @@ f/<id>/<expiresAtSeconds>/<secret>/<manageHash>/<encodedFilename>
 | `expiresAtSeconds` | 到期时间。由服务端在签发上传令牌时按套餐校验，改链接改不动它 |
 | `secret` | 12 位随机段，只存在于对象路径中、从不出现在分享链接里，因此拿到 `id` 也猜不出 Blob 直链 |
 | `manageHash` | 撤回口令的 SHA-256 摘要。口令本身只有上传者持有，别人即使翻出直链也删不掉文件 |
-| `encodedFilename` | `encodeURIComponent` 编码后的原始文件名，中文照常保留 |
+| `encodedFilename` | 原始文件名。只转义会破坏路径或响应头的字符（`% ? # / \\ "` 与控制符），中文、空格、括号原样保留 —— 对象存储按这一段生成 `Content-Disposition`，整体转义会让收件人另存时看到一串 `%E5%81%87` |
 
 额度校验发生在 `app/api/upload/route.ts` 签发令牌的时候：单文件大小上限交给 Blob
 服务端强制执行（客户端改不了），保留时长则按当前套餐的上限核对。
