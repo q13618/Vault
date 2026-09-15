@@ -6,6 +6,7 @@
 - **短链接**：`https://<域名>/d/ab3k9xm2qp`，够短，微信、短信里都发得出去。
 - **直传存储**：文件从浏览器直接传到 Vercel Blob，不经过 Serverless 函数转发，所以几个 G 的视频也传得动（>8 MB 自动走分片上传）。
 - **到期即废**：下载入口按到期时间即时拒绝访问，定时任务随后把对象从存储里彻底删除。
+- **网页存 PDF**：贴一个网址，远端无头浏览器渲染成 PDF，同样给一条到期作废的短链接。
 - **可提前撤回**：上传时会生成一条只有上传者持有的管理链接，点一下即可立即删除。
 - **零数据库**：元信息全部编码在对象路径里，不需要 Postgres / Redis，也没有需要备份的状态。
 
@@ -43,6 +44,8 @@ npm run build
 | `CRON_SECRET` | 建议 | 保护 `/api/cron/reap`；不设时退回校验 `x-vercel-cron-schedule` |
 | `VAULT_ANON_MAX_MB` | 否 | 匿名用户单文件上限（MB），默认 200 |
 | `VAULT_CANONICAL_HOST` | 否 | 分享链接使用的规范域名；不设时生产部署自动取 Vercel 的生产域名 |
+| `CLOUDFLARE_ACCOUNT_ID` | 网页转 PDF 需要 | Cloudflare 账号 ID |
+| `CLOUDFLARE_API_TOKEN` | 网页转 PDF 需要 | 需带 Browser Rendering: Edit 权限 |
 
 ## 自定义域名
 
@@ -81,6 +84,26 @@ f/<id>/<expiresAtSeconds>/<secret>/<manageHash>/<encodedFilename>
 额度校验发生在 `app/api/upload/route.ts` 签发令牌的时候：单文件大小上限交给 Blob
 服务端强制执行（客户端改不了），保留时长则按当前套餐的上限核对。
 
+## 网页转 PDF
+
+`POST /api/pdf`，请求体 `{ url, ttl }`。流程是：校验地址 → 调渲染服务拿 PDF 字节 →
+用**和上传文件完全相同的路径约定**写进 Blob。因此到期作废、提前撤回、短链分享、定时清理
+全部自动复用，这条路径没有引入任何新的状态。
+
+渲染实现收在 `lib/render.ts` 的 `PageRenderer` 接口后面，当前实现是 Cloudflare
+Browser Rendering（`POST /accounts/<id>/browser-rendering/pdf`）。要换成自建 Chromium
+或别家服务，只需在这个文件里加一个实现，调用方不用改。
+
+选它的主要理由是**中文字体**：自建 `@sparticuz/chromium` 只内置 Open Sans，CJK 会渲染成
+豆腐块，而且坏掉的字体会被嵌进 PDF 变成永久产物。托管服务没有这个问题。
+
+地址校验在 `lib/url-guard.ts`：只放行 http/https，拒绝回环、内网、链路本地（含云元数据
+端点 `169.254.169.254`）与带凭据的地址。需要说明的是，页面是由 Cloudflare 的浏览器抓取的，
+不在我们自己的网络里，所以经典 SSRF 并不成立；拦这些地址是因为它们本来也渲染不出东西，
+且不想让这个公开入口变成别人的探测工具。
+
+没配 Cloudflare 凭据时，界面上「存网页」页签会说明原因，接口返回 503 —— 不会静默失败。
+
 ## 保留时长与套餐
 
 `lib/plans.ts` 是唯一的额度来源，首页的对比表直接读它：
@@ -101,9 +124,12 @@ f/<id>/<expiresAtSeconds>/<secret>/<manageHash>/<encodedFilename>
   那一段。这只影响「绕过到期判断直连文件」，而且对象在到期后会被清理任务删除；
   撤回权限由独立的 `manageHash` 把守，不受影响。
 - 清理任务每小时跑一次，过期文件最多会在存储里多留一小时；但下载入口在到期那一刻就已拒绝访问。
-- 没有做用量限流。若要公开运营，建议在 Vercel 侧加上 WAF / 速率限制。
+- 有登录墙或人机验证的页面渲染不出来 —— Cloudflare Browser Rendering 设计上尊重 bot 防护，
+  不做伪装。这类失败会明确报错，而不是给出一张空白 PDF。
+- **没有做用量限流。** 上传只消耗存储，而网页转 PDF 会消耗按时长计费的浏览器额度，
+  公开运营前建议先在 Vercel 侧加上 WAF / 速率限制。
 
 ## 路线图
 
 - [x] 第一步：临时文件上传、短链分享、到期自动作废、提前撤回
-- [ ] 第二步：把输入的网页地址转成 PDF，同样按临时链接分发
+- [x] 第二步：把输入的网页地址转成 PDF，同样按临时链接分发

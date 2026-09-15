@@ -600,3 +600,132 @@ button {
   color: var(--ink-2);
   font-size: 14px;
 }
+
+/* ---------- 两种入口的切换 ---------- */
+
+.tabs {
+  display: inline-flex;
+  gap: 2px;
+  margin-bottom: 14px;
+  padding: 3px;
+  background: var(--bg-sunk);
+  border-radius: 999px;
+}
+
+.tabs button {
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  transition: background 0.15s, color 0.15s;
+}
+
+.tabs button:hover {
+  color: var(--ink);
+}
+
+.tabs button[aria-selected='true'] {
+  background: var(--bg-elev);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+}
+
+/* ---------- 网页转 PDF ---------- */
+
+.urlform {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 38px 24px 30px;
+  text-align: center;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+}
+
+.urlform .glyph {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 2px;
+  color: var(--accent);
+}
+
+.urlform strong {
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.urlform > span {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.urlrow {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
+  margin-top: 10px;
+}
+
+.urlrow input {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  padding: 9px 13px;
+  color: var(--ink);
+  background: var(--bg-sunk);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.urlrow input:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.urlrow input:disabled {
+  opacity: 0.6;
+}
+
+.urlform .hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ink-3);
+  max-width: 42ch;
+}
+
+.item-source {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 渲染时长不可知，用来回扫动的进度条表示「在做，但说不准多久」。 */
+.track[data-indeterminate='true'] > i {
+  width: 35%;
+  animation: track-sweep 1.15s ease-in-out infinite;
+}
+
+@keyframes track-sweep {
+  0% {
+    margin-left: -35%;
+  }
+  100% {
+    margin-left: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track[data-indeterminate='true'] > i {
+    width: 100%;
+    animation: none;
+    opacity: 0.45;
+  }
+}

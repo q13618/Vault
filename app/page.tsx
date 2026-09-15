@@ -1,6 +1,7 @@
-import Uploader from '@/components/uploader'
+import Workbench from '@/components/workbench'
 import { formatBytes, formatTtl } from '@/lib/format'
 import { maxTtl, PLAN_ORDER, PLANS, resolvePlan } from '@/lib/plans'
+import { rendererConfigured } from '@/lib/render'
 import { canonicalOrigin } from '@/lib/site'
 import { blobConfigured } from '@/lib/store'
 
@@ -16,16 +17,18 @@ export default function HomePage() {
         <h2>发文件，不必占着手机的内存。</h2>
         <p>
           丢一个文件进来，立刻拿到一条短链接 —— 微信、短信里发出去就行。
+          也可以贴一个网址，把网页存成 PDF 再分享。
           到了你设定的时间，文件和链接一起作废。不用注册。
         </p>
       </section>
 
       {configured ? (
-        <Uploader
+        <Workbench
           maxFileBytes={plan.maxFileBytes}
           ttls={plan.ttls}
           defaultTtl={plan.defaultTtl}
           shareOrigin={canonicalOrigin()}
+          pageToPdfEnabled={rendererConfigured()}
         />
       ) : (
         <div className="notice">
@@ -69,7 +72,8 @@ export default function HomePage() {
           <li>
             <span className="n">1</span>
             <span>
-              文件从你的浏览器直接传到对象存储，不经过中间服务器转发，所以几个 G 的视频也传得动。
+              文件从你的浏览器直接传到对象存储，不经过中间服务器转发，所以几个 G 的视频也传得动；
+              网页则由远端的无头浏览器渲染成 PDF，再存进同一个地方。
             </span>
           </li>
           <li>
